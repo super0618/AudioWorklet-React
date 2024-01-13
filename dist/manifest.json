@@ -3,6 +3,15 @@
     "manifest_version": 3,
     "name": "React Chrome Extension",
     "description": "This is a Chrome extension built with React and TypeScript",
+    "content_scripts": [
+        {
+            "js": ["js/content.js"],
+            "matches": [
+                "https://developer.chrome.com/docs/extensions/*",
+                "https://developer.chrome.com/docs/webstore/*"
+            ]
+        }
+    ],
     "action": {
         "default_popup": "js/index.html",
         "default_title": "React Chrome Extension"
