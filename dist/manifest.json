@@ -3,18 +3,18 @@
     "manifest_version": 3,
     "name": "React Chrome Extension",
     "description": "This is a Chrome extension built with React and TypeScript",
-    "background": {
-        "service_worker": "background.js"
+    "icons": {
+        "16": "images/icon-16.png",
+        "32": "images/icon-32.png",
+        "48": "images/icon-48.png",
+        "128": "images/icon-128.png"
     },
-    "permissions": ["activeTab", "scripting"],
     "action": {
-        "default_icon": {
-            "16": "images/icon-16.png",
-            "32": "images/icon-32.png",
-            "48": "images/icon-48.png",
-            "128": "images/icon-128.png"
-        }
+        "default_popup": "popup.html"
     },
+    "host_permissions": [
+        "https://developer.chrome.com/*"
+    ],
     "commands": {
         "_execute_action": {
             "suggested_key": {
