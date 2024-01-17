@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import socket from "./socket";
+import socket from "./utils/socket";
 import { convert32To16Base64String } from "./utils/functions";
-import "./App.css";
 
 const chunks: string[] = [];
 var recordingUniqueId: string = "";
 var curIndex: number = 0;
 
+interface TranscriptType {
+	actor: string;
+	end: number;
+	start: number;
+	state: string;
+	text: string;
+}
+
 export default function App() {
-	const [transcripts, setTranscripts] = useState<any>([]);
+	const [transcripts, setTranscripts] = useState<TranscriptType[]>([]);
 	const [socketStatus, setSocketStatus] = useState<string>("disconnected");
 
 	const sendAudioChunk = (index: number, rId: string) => {
@@ -24,23 +31,27 @@ export default function App() {
 	};
 
 	const recordAudio = async () => {
-		const stream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		try {
+			const stream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-		const audioContext: AudioContext = new AudioContext({ sampleRate: 48000 });
+			const audioContext: AudioContext = new AudioContext({ sampleRate: 48000 });
 
-		const sourceNode: MediaStreamAudioSourceNode = audioContext.createMediaStreamSource(stream);
+			const sourceNode: MediaStreamAudioSourceNode = audioContext.createMediaStreamSource(stream);
 
-		const scriptNode: ScriptProcessorNode = audioContext.createScriptProcessor(8192, 1, 1); // buffer size, input channels, output channels
+			await audioContext.audioWorklet.addModule("recorder.worklet.js");
 
-		sourceNode.connect(scriptNode).connect(audioContext.destination);
+			const recorder: AudioWorkletNode = new AudioWorkletNode(audioContext, "recorder.worklet");
 
-		scriptNode.onaudioprocess = async (e) => {
-			const inputData: Float32Array = e.inputBuffer.getChannelData(0);
+			sourceNode.connect(recorder).connect(audioContext.destination);
 
-			const outputData: string = await convert32To16Base64String(inputData);
+			recorder.port.onmessage = async (e: MessageEvent) => {
+				const outputData: string = await convert32To16Base64String(e.data);
 
-			chunks.push(outputData);
-		};
+				chunks.push(outputData);
+			};
+		} catch (err: any) {
+			console.log(err);
+		}
 	};
 
 	useEffect(() => {
@@ -64,12 +75,11 @@ export default function App() {
 			}, 1000);
 		});
 
-		socket.on("audioDataChunkReceived", (data: any) => {
-			// console.log(curIndex + " -> " + data);
+		socket.on("audioDataChunkReceived", () => {
 			sendAudioChunk(curIndex + 1, recordingUniqueId);
 		});
 
-		socket.on("transcription", (data: any) => {
+		socket.on("transcription", (data: TranscriptType[]) => {
 			console.log(data);
 			setTranscripts(data);
 		});
@@ -78,7 +88,7 @@ export default function App() {
 	return (
 		<>
 			<p>Socket: {socketStatus}</p>
-			{transcripts.map((transcript: any, index: number) => (
+			{transcripts.map((transcript: TranscriptType, index: number) => (
 				<p key={index}>{transcript.text}</p>
 			))}
 		</>
